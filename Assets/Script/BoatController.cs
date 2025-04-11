@@ -1,6 +1,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using TMPro;
+using UnityEngine.UI;
 
 public class BoatController : MonoBehaviour
 {
@@ -16,27 +18,83 @@ public class BoatController : MonoBehaviour
 
     private Rigidbody rb;
     private GameObject player;
-    private PlayerMovement movementScript;
-    private Rigidbody playerRb;
     private MeshRenderer playerMeshRenderer;
+
+    public Vector3 startPosition;
+    public Quaternion startRotation;
+
+    [Header("Timer Settings")]
+    public float maxRowTime;
+    private float currentRowTime;
+    private bool isTiming = false;
+
+    [Header("Timer UI")]
+    public TextMeshProUGUI timerText;
+    public Image BackGroundTimer;
+    public string timerLabel = "Stamina Left:";
+
+    [Header("Plastic Collection Reference")]
+    public PlasticCollection plasticCollection;
+
+    [Header("Boat Animation")]
+    public Animator leftPaddleAnimator;
+    public Animator rightPaddleAnimator;
+
+    [Header("Boat Character Reference")]
+    public GameObject boatCharacter;
 
     void Start()
     {
         rb = GetComponent<Rigidbody>();
+        startPosition = transform.position;
+        startRotation = transform.rotation;
+
+        if (timerText != null)
+            timerText.text = "";
+
+        if (BackGroundTimer != null)
+            BackGroundTimer.enabled = false;
+
+        if (boatCharacter != null)
+            boatCharacter.SetActive(false); // Hide the boat character at start
     }
 
     void Update()
     {
         if (isDriving)
         {
-            float moveInput = Input.GetAxis("Vertical"); // W/S or Up/Down
-            float turnInput = Input.GetAxis("Horizontal"); // A/D or Left/Right
+            float moveInput = Input.GetAxis("Vertical");
+            float turnInput = Input.GetAxis("Horizontal");
 
-            // Move and rotate the boat manually
             transform.Translate(Vector3.forward * moveInput * moveSpeed * Time.deltaTime);
             transform.Rotate(Vector3.up * turnInput * turnSpeed * Time.deltaTime);
 
-            if (Input.GetKeyDown(KeyCode.F)) // Press F to exit
+            // Paddle animation control
+            bool isMoving = Mathf.Abs(moveInput) > 0.1f;
+
+            if (leftPaddleAnimator != null)
+                leftPaddleAnimator.SetBool("IsRowing", isMoving);
+
+            if (rightPaddleAnimator != null)
+                rightPaddleAnimator.SetBool("IsRowing", isMoving);
+
+            // Timer logic
+            if (isTiming)
+            {
+                currentRowTime -= Time.deltaTime;
+
+                if (timerText != null)
+                    timerText.text = timerLabel + " " + Mathf.CeilToInt(currentRowTime).ToString();
+
+                if (currentRowTime <= 0f)
+                {
+                    Debug.Log("Time's up! Forcing exit with penalty.");
+                    ForceExitWithPenalty();
+                }
+            }
+
+            // Exit control
+            if (Input.GetKeyDown(KeyCode.F))
             {
                 ExitBoat();
             }
@@ -45,49 +103,122 @@ public class BoatController : MonoBehaviour
 
     public void EnterBoat(GameObject playerObj)
     {
-        player = playerObj; // Store player reference
+        player = playerObj;
 
-        // Switch to boat camera
         playerCam.SetActive(false);
         boatCam.SetActive(true);
 
-        // Disable the player's capsule MeshRenderer (optional for hiding player)
         playerMeshRenderer = player.GetComponentInChildren<MeshRenderer>();
         if (playerMeshRenderer != null)
-        {
             playerMeshRenderer.enabled = false;
-        }
 
-        // Disable the player GameObject completely
         player.SetActive(false);
 
         isDriving = true;
-        Debug.Log("Player entered the boat.");
+        currentRowTime = maxRowTime;
+        isTiming = true;
+
+        if (boatCharacter != null)
+            boatCharacter.SetActive(true); // Show boat character
+
+        if (timerText != null)
+            timerText.text = timerLabel + " " + Mathf.CeilToInt(maxRowTime);
+
+        if (BackGroundTimer != null)
+            BackGroundTimer.enabled = true;
+
+        Debug.Log("Player entered boat. Timer started.");
     }
 
     public void ExitBoat()
     {
         if (player == null)
         {
-            Debug.LogWarning("ExitBoat called, but player reference is null!");
+            Debug.LogWarning("ExitBoat called, but player is null.");
             return;
         }
 
         isDriving = false;
+        isTiming = false;
 
-        // Switch back to player camera
         playerCam.SetActive(true);
         boatCam.SetActive(false);
-
-        // Enable the player GameObject
         player.SetActive(true);
 
-        // Re-enable the MeshRenderer (if previously disabled)
         if (playerMeshRenderer != null)
-        {
             playerMeshRenderer.enabled = true;
+
+        if (boatCharacter != null)
+            boatCharacter.SetActive(false); // Hide boat character
+
+        ResetBoat();
+
+        if (timerText != null)
+            timerText.text = "";
+
+        if (BackGroundTimer != null)
+            BackGroundTimer.enabled = false;
+
+        // Stop paddle animations
+        if (leftPaddleAnimator != null)
+            leftPaddleAnimator.SetBool("IsRowing", false);
+
+        if (rightPaddleAnimator != null)
+            rightPaddleAnimator.SetBool("IsRowing", false);
+
+        player = null;
+    }
+
+    private void ForceExitWithPenalty()
+    {
+        if (player == null)
+        {
+            Debug.LogWarning("ForceExitWithPenalty called but player is null.");
+            return;
         }
 
-        player = null; // Clear reference
+        isDriving = false;
+        isTiming = false;
+
+        playerCam.SetActive(true);
+        boatCam.SetActive(false);
+        player.SetActive(true);
+
+        if (playerMeshRenderer != null)
+            playerMeshRenderer.enabled = true;
+
+        if (boatCharacter != null)
+            boatCharacter.SetActive(false); // Hide boat character
+
+        ResetBoat();
+
+        if (plasticCollection != null)
+        {
+            plasticCollection.ResetPlastic();
+        }
+
+        if (timerText != null)
+            timerText.text = "";
+
+        if (BackGroundTimer != null)
+            BackGroundTimer.enabled = false;
+
+        // Stop paddle animations
+        if (leftPaddleAnimator != null)
+            leftPaddleAnimator.SetBool("IsRowing", false);
+
+        if (rightPaddleAnimator != null)
+            rightPaddleAnimator.SetBool("IsRowing", false);
+
+        Debug.Log("Penalty applied: plastic reset due to timeout.");
+        player = null;
+    }
+
+    private void ResetBoat()
+    {
+        transform.position = startPosition;
+        transform.rotation = startRotation;
+        rb.velocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
     }
 }
