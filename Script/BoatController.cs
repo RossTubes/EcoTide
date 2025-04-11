@@ -1,0 +1,225 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using TMPro;
+using UnityEngine.UI;
+
+public class BoatController : MonoBehaviour
+{
+    public float moveSpeed = 10f;
+    public float turnSpeed = 50f;
+    private bool isDriving = false;
+
+    public GameObject playerCam;
+    public GameObject boatCam;
+
+    public Transform enterPoint;
+    public Transform exitPoint;
+
+    private Rigidbody rb;
+    private GameObject player;
+    private MeshRenderer playerMeshRenderer;
+
+    public Vector3 startPosition;
+    public Quaternion startRotation;
+
+    [Header("Timer Settings")]
+    public float maxRowTime;
+    private float currentRowTime;
+    private bool isTiming = false;
+
+    [Header("Timer UI")]
+    public TextMeshProUGUI timerText;
+    public Image BackGroundTimer;
+    public string timerLabel = "Stamina Left:";
+
+    [Header("Plastic Collection Reference")]
+    public PlasticCollection plasticCollection;
+
+    [Header("Boat Animation")]
+    public Animator leftPaddleAnimator;
+    public Animator rightPaddleAnimator;
+
+    [Header("Boat Character Reference")]
+    public GameObject boatCharacter;
+
+    void Start()
+    {
+        rb = GetComponent<Rigidbody>();
+        startPosition = transform.position;
+        startRotation = transform.rotation;
+
+        if (timerText != null)
+            timerText.text = "";
+
+        if (BackGroundTimer != null)
+            BackGroundTimer.enabled = false;
+
+        if (boatCharacter != null)
+            boatCharacter.SetActive(false); // Hide the boat character at start
+    }
+
+    void Update()
+    {
+        if (isDriving)
+        {
+            float moveInput = Input.GetAxis("Vertical");
+            float turnInput = Input.GetAxis("Horizontal");
+
+            transform.Translate(Vector3.forward * moveInput * moveSpeed * Time.deltaTime);
+            transform.Rotate(Vector3.up * turnInput * turnSpeed * Time.deltaTime);
+
+            // Paddle animation control
+            bool isMoving = Mathf.Abs(moveInput) > 0.1f;
+
+            if (leftPaddleAnimator != null)
+                leftPaddleAnimator.SetBool("IsRowing", isMoving);
+
+            if (rightPaddleAnimator != null)
+                rightPaddleAnimator.SetBool("IsRowing", isMoving);
+
+            // Timer logic
+            if (isTiming)
+            {
+                currentRowTime -= Time.deltaTime;
+
+                if (timerText != null)
+                    timerText.text = timerLabel + " " + Mathf.CeilToInt(currentRowTime).ToString();
+
+                if (currentRowTime <= 0f)
+                {
+                    Debug.Log("Time's up! Forcing exit with penalty.");
+                    ForceExitWithPenalty();
+                }
+            }
+
+            // Exit control
+            if (Input.GetKeyDown(KeyCode.F))
+            {
+                ExitBoat();
+            }
+        }
+    }
+
+    public void EnterBoat(GameObject playerObj)
+    {
+        player = playerObj;
+
+        playerCam.SetActive(false);
+        boatCam.SetActive(true);
+
+        playerMeshRenderer = player.GetComponentInChildren<MeshRenderer>();
+        if (playerMeshRenderer != null)
+            playerMeshRenderer.enabled = false;
+
+        player.SetActive(false);
+
+        isDriving = true;
+        currentRowTime = maxRowTime;
+        isTiming = true;
+
+        if (boatCharacter != null)
+            boatCharacter.SetActive(true); // Show boat character
+
+        if (timerText != null)
+            timerText.text = timerLabel + " " + Mathf.CeilToInt(maxRowTime);
+
+        if (BackGroundTimer != null)
+            BackGroundTimer.enabled = true;
+
+        Debug.Log("Player entered boat. Timer started.");
+    }
+
+    public void ExitBoat()
+    {
+        if (player == null)
+        {
+            Debug.LogWarning("ExitBoat called, but player is null.");
+            return;
+        }
+
+        isDriving = false;
+        isTiming = false;
+
+        playerCam.SetActive(true);
+        boatCam.SetActive(false);
+        player.SetActive(true);
+
+        if (playerMeshRenderer != null)
+            playerMeshRenderer.enabled = true;
+
+        if (boatCharacter != null)
+            boatCharacter.SetActive(false); // Hide boat character
+
+        ResetBoat();
+
+        if (timerText != null)
+            timerText.text = "";
+
+        if (BackGroundTimer != null)
+            BackGroundTimer.enabled = false;
+
+        // Stop paddle animations
+        if (leftPaddleAnimator != null)
+            leftPaddleAnimator.SetBool("IsRowing", false);
+
+        if (rightPaddleAnimator != null)
+            rightPaddleAnimator.SetBool("IsRowing", false);
+
+        player = null;
+    }
+
+    private void ForceExitWithPenalty()
+    {
+        if (player == null)
+        {
+            Debug.LogWarning("ForceExitWithPenalty called but player is null.");
+            return;
+        }
+
+        isDriving = false;
+        isTiming = false;
+
+        playerCam.SetActive(true);
+        boatCam.SetActive(false);
+        player.SetActive(true);
+
+        if (playerMeshRenderer != null)
+            playerMeshRenderer.enabled = true;
+
+        if (boatCharacter != null)
+            boatCharacter.SetActive(false); // Hide boat character
+
+        ResetBoat();
+
+        if (plasticCollection != null)
+        {
+            plasticCollection.ResetPlastic();
+        }
+
+        if (timerText != null)
+            timerText.text = "";
+
+        if (BackGroundTimer != null)
+            BackGroundTimer.enabled = false;
+
+        // Stop paddle animations
+        if (leftPaddleAnimator != null)
+            leftPaddleAnimator.SetBool("IsRowing", false);
+
+        if (rightPaddleAnimator != null)
+            rightPaddleAnimator.SetBool("IsRowing", false);
+
+        Debug.Log("Penalty applied: plastic reset due to timeout.");
+        player = null;
+    }
+
+    private void ResetBoat()
+    {
+        transform.position = startPosition;
+        transform.rotation = startRotation;
+        rb.velocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
+    }
+}
+    
