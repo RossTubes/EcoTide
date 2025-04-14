@@ -6,7 +6,6 @@ public class PlayerInteraction : MonoBehaviour
 {
     public float interactionRange = 3f;
     public LayerMask Boat;
-    private BoatController boat;
 
     void Update()
     {

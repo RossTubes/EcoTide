@@ -82,7 +82,7 @@ public class CarMove : MonoBehaviour
         ResetPlasticCounts(); // Reset the boat counters to 0
 
         // Add money for each delivered plastic box
-        GameManager.Instance.AddMoney(storedPlastic * 1000);
+        GameManager.Instance.AddMoney(storedPlastic * 10);
 
         // Activate boxes if more than 5 plastic was collected
         if (storedPlastic >= 5 && boxes != null)

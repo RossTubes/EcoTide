@@ -222,3 +222,4 @@ public class BoatController : MonoBehaviour
         rb.angularVelocity = Vector3.zero;
     }
 }
+    
