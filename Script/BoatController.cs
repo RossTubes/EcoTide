@@ -9,6 +9,14 @@ public class BoatController : MonoBehaviour
     public float moveSpeed = 10f;
     public float turnSpeed = 50f;
     private bool isDriving = false;
+    public float interactionRange = 3f; // Distance required to interact
+    private bool isNearBoat = false;
+    private bool isNearBigBoat = false;
+    public Transform boat;
+    public Transform playerTF;
+    public TextMeshProUGUI BoatInteractionText; // Assign in Inspector
+    public TextMeshProUGUI BigBoatInteractionText;
+
 
     public GameObject playerCam;
     public GameObject boatCam;
@@ -33,6 +41,10 @@ public class BoatController : MonoBehaviour
     public Image BackGroundTimer;
     public string timerLabel = "Stamina Left:";
 
+    [Header("Explanation UI")]
+    public TextMeshProUGUI explaInUI;
+    public Image BackGroundExplain;
+
     [Header("Plastic Collection Reference")]
     public PlasticCollection plasticCollection;
 
@@ -42,6 +54,8 @@ public class BoatController : MonoBehaviour
 
     [Header("Boat Character Reference")]
     public GameObject boatCharacter;
+
+    private Coroutine hideExplanationCoroutine;
 
     void Start()
     {
@@ -55,12 +69,43 @@ public class BoatController : MonoBehaviour
         if (BackGroundTimer != null)
             BackGroundTimer.enabled = false;
 
+        if (explaInUI != null)
+            explaInUI.text = "";
+
+        if (BackGroundExplain != null)
+            BackGroundExplain.enabled = false;
+
         if (boatCharacter != null)
             boatCharacter.SetActive(false); // Hide the boat character at start
     }
 
     void Update()
     {
+        // Check if the player is near the boat
+        isNearBoat = Vector3.Distance(boat.position, playerTF.position) < interactionRange;
+
+        // Show interaction text only when the player is near the boat and not already driving
+        if (isNearBoat && !isDriving)
+        {
+            BoatInteractionText.gameObject.SetActive(true);
+            BoatInteractionText.text = "Press F to enter";
+        }
+        else
+        {
+            BoatInteractionText.gameObject.SetActive(false);
+        }
+
+        // Show interaction text only when the player is near the boat and not already driving
+        if (isNearBigBoat && !isDriving)
+        {
+            BigBoatInteractionText.gameObject.SetActive(true);
+            BigBoatInteractionText.text = "Press F to enter";
+        }
+        else
+        {
+            BigBoatInteractionText.gameObject.SetActive(false);
+        }
+
         if (isDriving)
         {
             float moveInput = Input.GetAxis("Vertical");
@@ -119,7 +164,7 @@ public class BoatController : MonoBehaviour
         isTiming = true;
 
         if (boatCharacter != null)
-            boatCharacter.SetActive(true); // Show boat character
+            boatCharacter.SetActive(true);
 
         if (timerText != null)
             timerText.text = timerLabel + " " + Mathf.CeilToInt(maxRowTime);
@@ -127,7 +172,18 @@ public class BoatController : MonoBehaviour
         if (BackGroundTimer != null)
             BackGroundTimer.enabled = true;
 
-        Debug.Log("Player entered boat. Timer started.");
+        if (explaInUI != null)
+            explaInUI.text = "Use WASD to row and F to exit the boat.";
+
+        if (BackGroundExplain != null)
+            BackGroundExplain.enabled = true;
+
+        if (hideExplanationCoroutine != null)
+            StopCoroutine(hideExplanationCoroutine);
+
+        hideExplanationCoroutine = StartCoroutine(HideExplanationUIAfterDelay(5f));
+
+        Debug.Log("Player entered boat. Timer and explanation UI shown.");
     }
 
     public void ExitBoat()
@@ -149,7 +205,7 @@ public class BoatController : MonoBehaviour
             playerMeshRenderer.enabled = true;
 
         if (boatCharacter != null)
-            boatCharacter.SetActive(false); // Hide boat character
+            boatCharacter.SetActive(false);
 
         ResetBoat();
 
@@ -159,7 +215,18 @@ public class BoatController : MonoBehaviour
         if (BackGroundTimer != null)
             BackGroundTimer.enabled = false;
 
-        // Stop paddle animations
+        if (explaInUI != null)
+            explaInUI.text = "";
+
+        if (BackGroundExplain != null)
+            BackGroundExplain.enabled = false;
+
+        if (hideExplanationCoroutine != null)
+        {
+            StopCoroutine(hideExplanationCoroutine);
+            hideExplanationCoroutine = null;
+        }
+
         if (leftPaddleAnimator != null)
             leftPaddleAnimator.SetBool("IsRowing", false);
 
@@ -188,7 +255,7 @@ public class BoatController : MonoBehaviour
             playerMeshRenderer.enabled = true;
 
         if (boatCharacter != null)
-            boatCharacter.SetActive(false); // Hide boat character
+            boatCharacter.SetActive(false);
 
         ResetBoat();
 
@@ -203,7 +270,18 @@ public class BoatController : MonoBehaviour
         if (BackGroundTimer != null)
             BackGroundTimer.enabled = false;
 
-        // Stop paddle animations
+        if (explaInUI != null)
+            explaInUI.text = "";
+
+        if (BackGroundExplain != null)
+            BackGroundExplain.enabled = false;
+
+        if (hideExplanationCoroutine != null)
+        {
+            StopCoroutine(hideExplanationCoroutine);
+            hideExplanationCoroutine = null;
+        }
+
         if (leftPaddleAnimator != null)
             leftPaddleAnimator.SetBool("IsRowing", false);
 
@@ -221,5 +299,17 @@ public class BoatController : MonoBehaviour
         rb.velocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
     }
+
+    private IEnumerator HideExplanationUIAfterDelay(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+
+        if (explaInUI != null)
+            explaInUI.text = "";
+
+        if (BackGroundExplain != null)
+            BackGroundExplain.enabled = false;
+
+        hideExplanationCoroutine = null;
+    }
 }
-    
