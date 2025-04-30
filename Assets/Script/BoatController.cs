@@ -11,9 +11,11 @@ public class BoatController : MonoBehaviour
     private bool isDriving = false;
     public float interactionRange = 3f; // Distance required to interact
     private bool isNearBoat = false;
+    private bool isNearBigBoat = false;
     public Transform boat;
     public Transform playerTF;
     public TextMeshProUGUI BoatInteractionText; // Assign in Inspector
+    public TextMeshProUGUI BigBoatInteractionText;
 
 
     public GameObject playerCam;
@@ -91,6 +93,17 @@ public class BoatController : MonoBehaviour
         else
         {
             BoatInteractionText.gameObject.SetActive(false);
+        }
+
+        // Show interaction text only when the player is near the boat and not already driving
+        if (isNearBigBoat && !isDriving)
+        {
+            BigBoatInteractionText.gameObject.SetActive(true);
+            BigBoatInteractionText.text = "Press F to enter";
+        }
+        else
+        {
+            BigBoatInteractionText.gameObject.SetActive(false);
         }
 
         if (isDriving)

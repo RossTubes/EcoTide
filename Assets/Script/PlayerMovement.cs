@@ -41,7 +41,7 @@ public class PlayerMovement : MonoBehaviour
 
     void Update()
     {
-        grounded = Physics.Raycast(transform.position, Vector3.down, playerHeight * 0.9f + 0.1f, whatIsGround);
+        grounded = Physics.SphereCast(transform.position, 0.3f, Vector3.down, out RaycastHit hit, playerHeight * 0.5f + 0.3f, whatIsGround);
 
         Debug.DrawRay(transform.position, Vector3.down * (playerHeight * 0.5f + 0.1f), Color.red);
         myInput();
@@ -123,5 +123,22 @@ public class PlayerMovement : MonoBehaviour
         {
             Debug.LogError("Respawn point not assigned!");
         }
+    }
+
+    void OnDrawGizmosSelected()
+    {
+        Gizmos.color = Color.red;
+
+        // Visual parameters — must match SphereCast settings
+        float radius = 0.3f;
+        float distance = playerHeight * 0.5f + 0.3f;
+        Vector3 origin = transform.position;
+
+        // Draw the center line
+        Gizmos.DrawLine(origin, origin + Vector3.down * distance);
+
+        // Draw spheres to represent the start and end of the SphereCast
+        Gizmos.DrawWireSphere(origin, radius);
+        Gizmos.DrawWireSphere(origin + Vector3.down * distance, radius);
     }
 }
